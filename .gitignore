@@ -1,0 +1,9 @@
+__pycache__/
+*.log
+*.mp3
+*.mp4
+backend/generated/*
+!backend/generated/.keep
+backend/assets/*.png
+!backend/assets/placeholder.txt
+.DS_Store

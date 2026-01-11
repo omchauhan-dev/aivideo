@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Generator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, textarea, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        textarea {
+            resize: vertical;
+            height: 100px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            text-align: center;
+        }
+        video {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+        .character-preview {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+        .character-card {
+            border: 2px solid transparent;
+            cursor: pointer;
+            border-radius: 4px;
+            overflow: hidden;
+            width: 100px;
+            text-align: center;
+        }
+        .character-card.selected {
+            border-color: #007bff;
+        }
+        .character-card img {
+            width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>AI Video Creator</h1>
+    <div class="container">
+        <div class="form-group">
+            <label>Select Character:</label>
+            <div id="character-list" class="character-preview">
+                <!-- Characters will be loaded here -->
+                Loading characters...
+            </div>
+            <input type="hidden" id="selected-character">
+        </div>
+
+        <div class="form-group">
+            <label for="language">Language:</label>
+            <select id="language">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="script">Script:</label>
+            <textarea id="script" placeholder="Enter your script here..."></textarea>
+        </div>
+
+        <button id="generate-btn" onclick="generateVideo()">Generate Video</button>
+
+        <div id="result" style="display: none;">
+            <h3>Your Video:</h3>
+            <video id="video-player" controls></video>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = ""; // Relative path since frontend is served by backend
+
+        async function loadCharacters() {
+            try {
+                const response = await fetch(`${API_BASE}/api/characters`);
+                const characters = await response.json();
+                
+                const container = document.getElementById('character-list');
+                container.innerHTML = '';
+
+                characters.forEach((char, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'character-card';
+                    div.onclick = () => selectCharacter(char.id, div);
+                    
+                    const img = document.createElement('img');
+                    img.src = `${API_BASE}${char.image_url}`;
+                    img.alt = char.name;
+                    
+                    const name = document.createElement('div');
+                    name.innerText = char.name;
+                    
+                    div.appendChild(img);
+                    div.appendChild(name);
+                    container.appendChild(div);
+
+                    if (index === 0) selectCharacter(char.id, div); // Select first by default
+                });
+            } catch (error) {
+                console.error('Error loading characters:', error);
+                document.getElementById('character-list').innerText = 'Failed to load characters.';
+            }
+        }
+
+        function selectCharacter(id, element) {
+            document.getElementById('selected-character').value = id;
+            document.querySelectorAll('.character-card').forEach(c => c.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+
+        async function generateVideo() {
+            const charId = document.getElementById('selected-character').value;
+            const language = document.getElementById('language').value;
+            const script = document.getElementById('script').value;
+            const btn = document.getElementById('generate-btn');
+            const resultDiv = document.getElementById('result');
+            const videoPlayer = document.getElementById('video-player');
+
+            if (!script) {
+                alert("Please enter a script.");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerText = "Generating...";
+            resultDiv.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        character_id: charId,
+                        script: script,
+                        language: language
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(await response.text());
+                }
+
+                const data = await response.json();
+                videoPlayer.src = `${API_BASE}${data.video_url}`;
+                resultDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Error generating video:', error);
+                alert("Error generating video: " + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Generate Video";
+            }
+        }
+
+        // Initialize
+        loadCharacters();
+    </script>
+</body>
+</html>

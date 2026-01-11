@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+gTTS
+moviepy
+imageio-ffmpeg
+pillow
+python-multipart
+aiofiles
